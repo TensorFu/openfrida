@@ -2,9 +2,15 @@
 #include <string>
 
 
+// jobject 就是针对 MainActivity 的对象
+
+// JNI 调用 java 层的一个方法
+// jclass cls = (*env)->GetObjectClass(env, obj);
+// jmethodID mid = (*env)->GetMethodID(env, cls, "toString", "()Ljava/lang/String;");
+// jstring result = (jstring)(*env)->CallObjectMethod(env, obj, mid);
 extern "C" JNIEXPORT jstring
 JNICALL
-stringFromJNI(JNIEnv* env,jobject){
+stringFromJNI(JNIEnv* env,jobject jobj){
     std::string hello = "hello,JNI_OnLoad";
 
     // NewStringUTF 返回 java 的 String 的对象
@@ -23,6 +29,7 @@ JNINativeMethod methods[] = {
 };
 
 // 动态注册
+// JavaVM *vm 就是指向 java 虚拟机的一个指针，主要就是一个生成一个 env
 JNIEXPORT jint JNICALL
 JNI_OnLoad(JavaVM* vm,void* reserved){
     // 指针是一个变量，存储另一个变量的地址
@@ -35,7 +42,7 @@ JNI_OnLoad(JavaVM* vm,void* reserved){
     // env 就是 NDK 的环境，所有的NDK的函数的使用都是使用的这个调用
     // env
     JNIEnv* env;
-
+    // 获取 env
     if (vm->GetEnv(reinterpret_cast<void**>(&env),JNI_VERSION_1_6) != JNI_OK){
         return JNI_ERR;
     }
