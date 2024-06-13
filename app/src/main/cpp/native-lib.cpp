@@ -35,10 +35,6 @@ JNI_OnLoad(JavaVM* vm,void* reserved){
     // env 就是 NDK 的环境，所有的NDK的函数的使用都是使用的这个调用
     // env
     JNIEnv* env;
-    JNIEnv *gogo;
-
-    jclass okss = gogo->FindClass("com/go/openfrida/MainActivity");
-    jclass clazz = env->FindClass("com/go/openfrida/MainActivity");
 
     if (vm->GetEnv(reinterpret_cast<void**>(&env),JNI_VERSION_1_6) != JNI_OK){
         return JNI_ERR;
