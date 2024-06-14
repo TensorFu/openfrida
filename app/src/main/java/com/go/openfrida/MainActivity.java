@@ -30,10 +30,16 @@ public class MainActivity extends AppCompatActivity {
         TextView tv = binding.sampleText;
         tv.setText(stringFromJNI());
 
+        // 测试
         followFrida ff = new followFrida();
         boolean checkPort =  ff.followFridaByPort();
         if (checkPort){
             Log.i(TAG,"找到Frida by port");
+        }
+
+        boolean checkD_BUS = ff.followFridaByD_Bus();
+        if (checkD_BUS){
+            Log.i(TAG,"Find Frida by D_BUS");
         }
     }
 
