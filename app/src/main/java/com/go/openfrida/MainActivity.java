@@ -3,8 +3,10 @@ package com.go.openfrida;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.TextView;
 
+import com.go.openfrida.core.followFrida;
 import com.go.openfrida.databinding.ActivityMainBinding;
 
 public class MainActivity extends AppCompatActivity {
@@ -13,6 +15,7 @@ public class MainActivity extends AppCompatActivity {
     static {
         System.loadLibrary("openfrida");
     }
+    String TAG  = "openFrida";
 
     private ActivityMainBinding binding;
 
@@ -26,11 +29,27 @@ public class MainActivity extends AppCompatActivity {
         // Example of a call to a native method
         TextView tv = binding.sampleText;
         tv.setText(stringFromJNI());
+
+        followFrida ff = new followFrida();
+        boolean checkPort =  ff.followFridaByPort();
+        if (checkPort){
+            Log.i(TAG,"找到Frida by port");
+        }
     }
 
-    /**
-     * A native method that is implemented by the 'openfrida' native library,
-     * which is packaged with this application.
-     */
     public native String stringFromJNI();
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
