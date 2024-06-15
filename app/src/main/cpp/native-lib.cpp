@@ -90,8 +90,31 @@ followFridaByD_Bus(JNIEnv* env,jobject obj){
                     result = JNI_TRUE;
                 }
             }
+            close(sock);
         }
     }
+    jclass clazz = env->FindClass("java/lang/Boolean");
+    jmethodID booleanConstructor = env->GetMethodID(clazz,"<init>","(Z)V");
+    jobject booleanObject = env->NewObject(clazz,booleanConstructor,result);
+    return booleanObject;
+}
+
+// 读取 /proc/self/maps
+extern "C" JNIEXPORT jobject
+JNICALL
+followFridaByMaps(JNIEnv* env,jobject obj){
+    char line[512];
+    FILE* fp;
+    fp = fopen("/proc/self/maps", "r");
+    jboolean result = JNI_FALSE;
+    if(fp){
+        while (fgets(line,512,fp)){
+            if (strstr(line,"frida")){
+                result = JNI_TRUE;
+            }
+        }
+    }
+
     jclass clazz = env->FindClass("java/lang/Boolean");
     jmethodID booleanConstructor = env->GetMethodID(clazz,"<init>","(Z)V");
     jobject booleanObject = env->NewObject(clazz,booleanConstructor,result);
@@ -110,7 +133,8 @@ JNINativeMethod MainActivityMethods[] = {
 
 JNINativeMethod coreMethods[] = {
         {"followFridaByPort","()Ljava/lang/Boolean;",(void*)followFridaByPort},
-        {"followFridaByD_Bus","()Ljava/lang/Boolean;",(void*)followFridaByD_Bus}
+        {"followFridaByD_Bus","()Ljava/lang/Boolean;",(void*)followFridaByD_Bus},
+        {"followFridaByMaps","()Ljava/lang/Boolean;",(void*)followFridaByMaps}
 };
 
 
@@ -151,8 +175,6 @@ JNI_OnLoad(JavaVM* vm,void* reserved){
     if(env->RegisterNatives(coreClazz,coreMethods,sizeof (coreMethods)/sizeof (coreMethods[0]))<0){
         return JNI_ERR;
     }
-
-
     return JNI_VERSION_1_6;
 }
 

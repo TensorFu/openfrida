@@ -41,6 +41,11 @@ public class MainActivity extends AppCompatActivity {
         if (checkD_BUS){
             Log.i(TAG,"Find Frida by D_BUS");
         }
+
+        boolean check_Maps = ff.followFridaByMaps();
+        if(check_Maps){
+            Log.i(TAG,"Find frida by /proc/self/Maps");
+        }
     }
 
     public native String stringFromJNI();
