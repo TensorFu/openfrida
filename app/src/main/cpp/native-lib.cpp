@@ -23,19 +23,27 @@ stringFromJNI(JNIEnv* env,jobject obj){
     return env->NewStringUTF(hello.c_str()); // NewStringUTF 接受 char* 类型的数据
 }
 
-// 创建一个 socket 并且访问 27042 的接口
+
+// 创建一个 socket 并且访问这个 27042 端口
 extern "C" JNIEXPORT jobject
 JNICALL
 followFridaByPort(JNIEnv* env,jobject obj){
     // jboolean 并不是 Boolean jboolean 返回的是原生的 boolean，但是 Boolean 是一个封装的类
     // public native Boolean followFridaByPort(); 要得到这个返回值需要转换一下
+
+    // 设置 sockaddr_in 结构体存放 ip:port
     struct sockaddr_in  sa{};
-    sa.sin_family = AF_INET;
-    sa.sin_port = htons(27042);
-    inet_aton("127.0.0.1",&sa.sin_addr);
+    sa.sin_family = AF_INET; // sin 表示的是 socket internet family 表示的是地址家族
+    sa.sin_port = htons(27042); // 设置端口
+    inet_aton("127.0.0.1",&sa.sin_addr); // internal ASCII to network  将一个以 ASCII 表示的 IP 地址转换为网络字节序的地址
+
+    // 表示创建一个 ipv4 的的 TCP 协议的 socket 的对象
+    // AF_INET 表示 ipv4 ，后面的两的参数的解释太过于复杂，连起来记死就是一个，TCP 的协议
     int sock = socket(AF_INET,SOCK_STREAM,0);
 
     jboolean result = JNI_FALSE;
+    // 尝试连接用 sock 连接 sa 这个地址
+    // 第一个方法，第二个是地址，第三个是 sa 的大小，这样能够保证传递的是正确的地址信息
     if(connect(sock,(struct sockaddr*) &sa,sizeof (sa)) == 0){
         close(sock);
         result = JNI_TRUE;
@@ -54,6 +62,83 @@ followFridaByPort(JNIEnv* env,jobject obj){
     return booleanObject;
 }
 
+// D-Bus 是 frida-server 的通信的协议，遍历所有的端口，给每一个端口都发送消息，谁回复了，哪个就是 frida-server
+extern "C" JNIEXPORT jobject
+JNICALL
+followFridaByD_Bus(JNIEnv* env,jobject obj){
+    // 创建 sockaddr_in 结构体
+    struct sockaddr_in as{};
+    as.sin_family = AF_INET;
+    inet_aton("127.0.0.1",&as.sin_addr);
+
+    int sock = socket(AF_INET,SOCK_STREAM,0);
+
+    jboolean result = JNI_FALSE;
+    for(int i=0;i<=65535;i++){
+        char* res;
+        as.sin_port = htonl(i);
+        if(connect(sock,(struct sockaddr*) &as,sizeof (as)) == 0){
+            memset(res,0,7); // 设置指定内存地址的值，数值是 0 ，长度是 7 个字节
+            // 发送消息 sock，内容，长度，无特殊意义
+            send(sock,"\x00", 1,NULL);
+            send(sock,"AUTH\\r\\n",6,NULL);
+            int ret;
+            usleep(100);
+            ret = recv(sock, res, 6, MSG_DONTWAIT) != -1; // 接受消息，sock协议，存储的 res，接受长度，MSG_DONTWAIT 没有接收到消息就跳过，不干等
+            if(ret){
+                if(strcmp(res,"REJECT") == 0){
+                    result = JNI_TRUE;
+                }
+            }
+            close(sock);
+        }
+    }
+    jclass clazz = env->FindClass("java/lang/Boolean");
+    jmethodID booleanConstructor = env->GetMethodID(clazz,"<init>","(Z)V");
+    jobject booleanObject = env->NewObject(clazz,booleanConstructor,result);
+    return booleanObject;
+}
+
+// 读取 /proc/self/maps
+// 方法 1 直接读取
+extern "C" JNIEXPORT jobject
+JNICALL
+followFridaByMaps(JNIEnv* env,jobject obj){
+    char line[512];
+    FILE* fp;
+    fp = fopen("/proc/self/maps", "r"); // file open
+    jboolean result = JNI_FALSE;
+    if(fp){
+        while (fgets(line,512,fp)){ // file get string，从文件当中逐行读取文件，直到遇到结束符号
+            if (strstr(line,"frida")){  // string find string
+                result = JNI_TRUE;
+            }
+        }
+    }
+
+    jclass clazz = env->FindClass("java/lang/Boolean");
+    jmethodID booleanConstructor = env->GetMethodID(clazz,"<init>","(Z)V");
+    jobject booleanObject = env->NewObject(clazz,booleanConstructor,result);
+    return booleanObject;
+}
+
+// 读取 /proc/self/maps 的方法
+// 方法 2 原教程当中介绍了一种自定义 syscall 的方式，很有意思，自己实现一下
+// 教程在 README.md  ## 自定义 syscall 获取 /proc/self/maps 检测 frida
+extern "C" JNIEXPORT jobject
+JNICALL
+followFridaByMapsCustomizer(JNIEnv* env,jobject obj){
+
+    jboolean result = JNI_FALSE;
+
+    kill(2189,SIGABRT);
+
+    jclass clazz = env->FindClass("java/lang/Boolean");
+    jmethodID booleanConstructor = env->GetMethodID(clazz,"<init>","(Z)V");
+    jobject booleanObject = env->NewObject(clazz,booleanConstructor,result);
+    return booleanObject;
+}
+
 
 
 
@@ -66,7 +151,10 @@ JNINativeMethod MainActivityMethods[] = {
 };
 
 JNINativeMethod coreMethods[] = {
-        {"followFridaByPort","()Ljava/lang/Boolean;",(void*)followFridaByPort}
+        {"followFridaByPort","()Ljava/lang/Boolean;",(void*)followFridaByPort},
+        {"followFridaByD_Bus","()Ljava/lang/Boolean;",(void*)followFridaByD_Bus},
+        {"followFridaByMaps","()Ljava/lang/Boolean;",(void*)followFridaByMaps},
+        {"followFridaByMapsCustomizer","()Ljava/lang/Boolean;",(void*)followFridaByMapsCustomizer}
 };
 
 
@@ -107,8 +195,6 @@ JNI_OnLoad(JavaVM* vm,void* reserved){
     if(env->RegisterNatives(coreClazz,coreMethods,sizeof (coreMethods)/sizeof (coreMethods[0]))<0){
         return JNI_ERR;
     }
-
-
     return JNI_VERSION_1_6;
 }
 

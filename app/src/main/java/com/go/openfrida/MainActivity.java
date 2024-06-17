@@ -30,11 +30,29 @@ public class MainActivity extends AppCompatActivity {
         TextView tv = binding.sampleText;
         tv.setText(stringFromJNI());
 
+        // 测试
         followFrida ff = new followFrida();
         boolean checkPort =  ff.followFridaByPort();
         if (checkPort){
             Log.i(TAG,"找到Frida by port");
         }
+
+        boolean checkD_BUS = ff.followFridaByD_Bus();
+        if (checkD_BUS){
+            Log.i(TAG,"Find Frida by D_BUS");
+        }
+
+        boolean check_Maps = ff.followFridaByMaps();
+        if(check_Maps){
+            Log.i(TAG,"Find frida by /proc/self/Maps");
+        }
+
+        boolean check_Maps_customerSyscall = ff.followFridaByMapsCustomizer();
+        if(check_Maps_customerSyscall){
+            Log.i(TAG,"Find frida by /proc/self/Maps \n Customizer Syscall");
+        }
+
+
     }
 
     public native String stringFromJNI();
