@@ -23,7 +23,7 @@ stringFromJNI(JNIEnv* env,jobject obj){
     return env->NewStringUTF(hello.c_str()); // NewStringUTF 接受 char* 类型的数据
 }
 
-
+// 创建一个 socket 并且访问 27042 的接口
 extern "C" JNIEXPORT jobject
 JNICALL
 followFridaByPort(JNIEnv* env,jobject obj){
